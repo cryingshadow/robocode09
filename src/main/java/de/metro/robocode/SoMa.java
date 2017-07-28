@@ -1,99 +1,80 @@
 package de.metro.robocode;
 
 import robocode.*;
+import static robocode.util.Utils.normalRelativeAngleDegrees;
 
 
 
 public class SoMa extends AdvancedRobot {
-	double battlefield_x ;
-	double battlefield_y;
-	double myX;
-	double myY;
-	boolean isAtWall = false;
-	boolean hasTurned = false;
-	boolean isTurning = false;
+	int direction = 1;
+	boolean locked = false;
+	String target = "";
+	int countRadarIteration = 0;
+	boolean close = false;
+	
     @Override
     public void run() {
-    	battlefield_y = getBattleFieldHeight();
-    	battlefield_x = getBattleFieldWidth();
-    	myX = getX();
-    	myY =getY();
-        double radius = 100.0;
-        double angle = 90.0;
-        while (true) {
-        	myX = getX();
-    		while (getHeading() > 96 || getHeading() < 84)
+    	while (true)
+    	{
+    		setTurnRadarLeft(10000);
+    		if (!(close && getEnergy() < 50))
+    			setAhead(100);
+    		else
+    			setAhead(0);
+    		//setTurnLeft(90);
+    		//setTurnGunLeft(90);
+    		execute();
+    		if(getRadarHeading() > 200 )
     		{
-    			setTurnLeft(5);
-    			execute();
+    			countRadarIteration++;
     		}
-        	//setTurnRadarLeft(1000000);
-        	if (myX < battlefield_x - 100)
-        	{
-        		setAhead(20);
-        	}
-        	else
-        	{
-        		if (!isAtWall)
-        		{
-        			if (getHeading() > 90)
-        			{
-        				setTurnLeft(getHeading() - 90);
-        			}
-        			else
-        			{
-        				setTurnRight(90 - getHeading());
-        			}
-        			isAtWall = true;
-        		}
-        	}
-        	
-        	if (!hasTurned && isAtWall)
-        	{
-        		turnLeft(90);
-        		hasTurned = true;
-        	}
-        	if (hasTurned && isAtWall)
-        	{
-        		setAhead(100);
-        		if ((getY() > battlefield_y - 50 || getY() < 50))
-        		{
-        			if (isTurning == false)
-        			{
-        			isTurning = true;
-        			setTurnLeft(180);
-        			}
-        		}
-        		/*else if ( getY() < battlefield_y - 50 && getY() > 50) 
-        			isTurning = false;*/
-        	}
-
-        //setTurnLeft(getHeading() % 90);
-
-   	
-
-            //setAhead(radius);
-            //setTurnLeft(angle);
-            setTurnGunLeft(angle);
-            //setfireBullet(getEnergy());
-            execute();
-        }
+    		if (countRadarIteration > 5)
+    		{
+    			locked = false;
+    		}
+    	}
     }
 
     public void onScannedRobot(ScannedRobotEvent e) {
-        fire(1);
+    	if (!locked)
+    	{
+    		locked = true;
+    		target = e.getName();
+    	}
+    		
+    	if (e.getName() == target)
+    	{
+    		double absbear = getHeading() + e.getBearing();
+    		double bearingGun = normalRelativeAngleDegrees(absbear - getGunHeading());
+    		setTurnGunRight(bearingGun);
+    		if (e.getDistance() < 60)
+    		{
+    			close = true;
+    		}
+    		else
+    			close = false;
+    		countRadarIteration = 0;
+    		setTurnRight(e.getBearing());
+    		if (e.getDistance() < 50)
+    		{
+    			if(getGunHeat() <= 0.5)
+    				fire(3);
+    		}
+    		else if (e.getDistance() < 75)
+    		{
+    			if(getGunHeat() <= 0.5)
+    				fire(2);    			
+    		}
+    		else if (e.getDistance() < 150)
+    		{
+    			if(getGunHeat() <= 0.5)
+    				fire(1); 
+    		}
+    	}
+        //fire(2);
     }
     
     public void onHitWall() {
-    	if (!isAtWall)
-    	{
-    		isAtWall = true;
-    		//turnLeft(90);
-    	}
-    	else
-    	{
-    		//setTurnLeft(180);
-    	}
 	}
 
     public void onHitByBullet(HitByBulletEvent e) {
